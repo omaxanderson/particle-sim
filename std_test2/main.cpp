@@ -6,13 +6,20 @@
 //  Copyright © 2017 Max Anderson. All rights reserved.
 //
 //  TODO
+//  add mass
 //  particle collision
 //  gravitational attraction between particles
 //  multithreading
+//      - separate threads can perform operations on a fraction of the
+//          particles but still compare to every other particle
+//      - update can go at the very end after threads have been joined
+//      - can have a set of threads dedicated to performing collision
+//          and another set to do gravity calculations
 
 #include <iostream>
 #include <cstdlib>
 #include <vector>
+#include <thread>
 #include "BasicConfig.hpp"
 #include "Particle.hpp"
 
@@ -21,7 +28,8 @@ using namespace std;
 const int SCREEN_WIDTH = 1000;
 const int SCREEN_HEIGHT = 600;
 const double GRAVITATIONAL_CONST = 0.0667408;
-const int NUM_PARTICLES = 50000;
+const int NUM_PARTICLES = 1000000;
+const int NUM_THREADS = 5;
 
 SDL_Window* window = NULL;
 SDL_Renderer* renderer = NULL;
@@ -104,24 +112,54 @@ bool initialize() {
     return true;
 }
 
+void threadDrawTask(int start, int end) {
+    for (int i = start; i < end; i++) {
+        if (attractionOn) {
+            vec2 attraction;
+            attraction.x = (blackHole.x - particles[i].getX()) * GRAVITATIONAL_CONST /
+                            pow(euclideanDist(blackHole, particles[i].getPos()), 2);
+            attraction.y = (blackHole.y - particles[i].getY()) * GRAVITATIONAL_CONST /
+                            pow(euclideanDist(blackHole, particles[i].getPos()), 2);
+            particles[i].applyForce(attraction);
+        } else if (gravityOn) {
+            particles[i].applyForce(gravity);
+        }
+    }
+}
+
+void threadUpdateTask(int start, int end) {
+    for (int i = start; i < end; i++) {
+        particles[i].update();
+        particles[i].draw(*renderer);
+    }
+}
+
 void draw() {
-    //Fill the surface white
-    //SDL_FillRect( screenSurface, NULL, SDL_MapRGB( screenSurface->format, 0xAA, 0xAA, 0xFF ) );
-    
+
     SDL_SetRenderDrawColor(renderer, 0x00, 0x00, 0x00, 0xff);
     SDL_RenderClear(renderer);
     SDL_SetRenderDrawColor( renderer, 0xFF, 0xFF, 0xFF, 0xFF );
     
-    //SDL_Rect rect = { SCREEN_WIDTH / 6, SCREEN_HEIGHT / 6, SCREEN_WIDTH * 2 / 3, SCREEN_HEIGHT * 2 / 3 };
-    //SDL_RenderDrawRect(renderer, &rect);
     
     
-    //for (size_t i = 0; i < particles.size(); i++) {
-    //    particles[i].applyForce(gravity);
-    //    particles[i].update();
-    //    particles[i].draw(*renderer);
-    //}
+    // thread testing
+
+    vector<thread> threads(NUM_THREADS);
+    for (int i = 0; i < NUM_THREADS; i++) {
+        threads[i] = thread(threadDrawTask, i * (NUM_PARTICLES / NUM_THREADS),
+                            (i + 1) * (NUM_PARTICLES / NUM_THREADS));
+    }
+    for (thread &t : threads) {
+        t.join();
+    }
+
+    for (Particle &p : particles) {
+        p.update();
+        p.draw(*renderer);
+    }
+
     
+/*
     for (Particle &p : particles) {
         if (attractionOn) {
             vec2 attraction;
@@ -135,24 +173,11 @@ void draw() {
         p.update();
         p.draw(*renderer);
     }
+  */  
     
-    /* 
-    img = IMG_Load("images/dany.jpg");
-    if (img == NULL) {
-        cout << "error loading image" << endl;
-    } else {
-        cout << "worked" << endl;
-    }
-    
-    SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, img);
-    
-    SDL_RenderCopy(renderer, texture, NULL, NULL);
-    */
-     
-    SDL_RenderPresent(renderer);
 
-    //SDL_DestroyTexture(texture);
-    SDL_UpdateWindowSurface( window );
+    SDL_RenderPresent(renderer);
+    //SDL_UpdateWindowSurface( window );
 }
 
 void close() {
@@ -172,7 +197,7 @@ int main(int argc, const char * argv[]) {
     
     bool quit = false;
     SDL_Event e;
-    int i = 0;
+    
     while (!quit) {
         //SDL_Delay(10);
         while (SDL_PollEvent(&e) != 0) {

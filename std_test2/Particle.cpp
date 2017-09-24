@@ -9,26 +9,27 @@
 #include "Particle.hpp"
 #include <iostream>
 
-Particle::Particle() : x(), y() {
+Particle::Particle() {
     pos.x = 0;
     pos.y = 0;
     vel.x = 0;
     vel.y = 0;
     acc.x = 0;
     acc.y = 0;
+    mass = 1;
 }
 
-Particle::Particle(float x, float y) {
+Particle::Particle(float x, float y, float mass) {
     pos.x = x;
     pos.y = y;
     vel.x = 0;
     vel.y = 0;
     acc.x = 0;
     acc.y = 0;
+    this->mass = mass;
 }
 
 vec2 Particle::getPos() {
-
     return vec2(pos.x, pos.y);
 }
 
@@ -56,14 +57,14 @@ vec2 Particle::getVelocity() {
 
 void Particle::checkCollisionAndGravitation(vector<Particle> vec) {
     for (Particle &p : vec) {
-        float px = p.getX();
-        float py = p.getY();
+        // float px = p.getX();
+        // float py = p.getY();
         if (euclideanDist(p.getPos(), pos) < 0.1) {
             applyForce(p.getVelocity().mult(0.01));
             cout << "c";
         }
         
-        //applyForce(vec2((pos.x - p.x) * GRAVITATIONAL_CONST / 50000000,
+        // applyForce(vec2((pos.x - p.x) * GRAVITATIONAL_CONST / 50000000,
         //                (pos.y - p.y) * GRAVITATIONAL_CONST / 50000000));
     }
 }

@@ -18,7 +18,7 @@ using namespace std;
 class Particle {
 public:
     Particle();
-    Particle(float x, float y);
+    Particle(float x, float y, float mass = 1);
     int getX();
     int getY();
     void applyForce(vec2 force);
@@ -29,11 +29,11 @@ public:
     vec2 getVelocity();
     
 private:
-    int x, y;
     int color[4];
     vec2 pos;
     vec2 vel;
     vec2 acc;
+    double mass;
     
     
 };
